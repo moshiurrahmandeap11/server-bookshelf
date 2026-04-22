@@ -1,6 +1,6 @@
-import { uploadSingle, uploadMultiple, deleteFromCloudinary, getPublicIdFromUrl } from '../middleware/upload.js';
+import { deleteFromCloudinary } from '../middleware/upload.js';
 
-
+// সিঙ্গেল ফাইল আপলোড কন্ট্রোলার
 export const uploadSingleFile = async (req, res) => {
     try {
         if (!req.file) {
@@ -10,6 +10,13 @@ export const uploadSingleFile = async (req, res) => {
             });
         }
 
+        // ফাইলের টাইপ নির্ধারণ
+        let resourceType = 'raw';
+        if (req.file.mimetype.startsWith('image/')) {
+            resourceType = 'image';
+        } else if (req.file.mimetype.startsWith('video/')) {
+            resourceType = 'video';
+        }
 
         const fileData = {
             url: req.file.path,
@@ -17,8 +24,7 @@ export const uploadSingleFile = async (req, res) => {
             format: req.file.mimetype.split('/')[1],
             size: req.file.size,
             originalName: req.file.originalname,
-            resourceType: req.file.mimetype.startsWith('image/') ? 'image' : 
-                         req.file.mimetype.startsWith('video/') ? 'video' : 'raw'
+            resourceType: resourceType
         };
 
         return res.status(200).json({
@@ -36,7 +42,7 @@ export const uploadSingleFile = async (req, res) => {
     }
 };
 
-
+// মাল্টিপল ফাইল আপলোড কন্ট্রোলার
 export const uploadMultipleFiles = async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
@@ -46,15 +52,23 @@ export const uploadMultipleFiles = async (req, res) => {
             });
         }
 
-        const filesData = req.files.map(file => ({
-            url: file.path,
-            publicId: file.filename,
-            format: file.mimetype.split('/')[1],
-            size: file.size,
-            originalName: file.originalname,
-            resourceType: file.mimetype.startsWith('image/') ? 'image' : 
-                         file.mimetype.startsWith('video/') ? 'video' : 'raw'
-        }));
+        const filesData = req.files.map(file => {
+            let resourceType = 'raw';
+            if (file.mimetype.startsWith('image/')) {
+                resourceType = 'image';
+            } else if (file.mimetype.startsWith('video/')) {
+                resourceType = 'video';
+            }
+
+            return {
+                url: file.path,
+                publicId: file.filename,
+                format: file.mimetype.split('/')[1],
+                size: file.size,
+                originalName: file.originalname,
+                resourceType: resourceType
+            };
+        });
 
         return res.status(200).json({
             success: true,
@@ -71,7 +85,7 @@ export const uploadMultipleFiles = async (req, res) => {
     }
 };
 
-
+// ফাইল ডিলিট কন্ট্রোলার
 export const deleteFile = async (req, res) => {
     try {
         const { publicId, resourceType } = req.body;
