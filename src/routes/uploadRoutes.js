@@ -3,17 +3,12 @@ import {
     uploadSingleFile, 
     uploadMultipleFiles, 
     deleteFile 
-} from "../controllers/uploadControllers.js";
+} from "../controllers/uploadController.js";
 import verifyToken from "../middleware/verifyToken.js";
 import { uploadSingle, uploadMultiple } from "../middleware/upload.js";
 
 const router = Router();
 
-// ==============================================
-// সিঙ্গেল ফাইল আপলোড রাউট
-// ==============================================
-// URL: POST /api/upload/single/:folderName
-// Body: form-data with key 'file'
 router.post(
     "/single/:folder", 
     verifyToken, 
@@ -33,11 +28,7 @@ router.post(
     uploadSingleFile
 );
 
-// ==============================================
-// মাল্টিপল ফাইল আপলোড রাউট
-// ==============================================
-// URL: POST /api/upload/multiple/:folderName
-// Body: form-data with key 'files' (multiple files)
+
 router.post(
     "/multiple/:folder", 
     verifyToken, 
@@ -57,11 +48,7 @@ router.post(
     uploadMultipleFiles
 );
 
-// ==============================================
-// ফাইল ডিলিট রাউট
-// ==============================================
-// URL: DELETE /api/upload/delete
-// Body: { "publicId": "folder/filename", "resourceType": "image" }
+
 router.delete("/delete", verifyToken, deleteFile);
 
 export default router;
