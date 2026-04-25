@@ -2,16 +2,11 @@ import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from '../config/cloudinary.js';
 
-
 const fileFilter = (req, file, cb) => {
-
-    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
-
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp', 'image/ico' ];
     const allowedVideoTypes = ['video/mp4', 'video/mkv', 'video/avi', 'video/mov', 'video/webm'];
-
     const allowedDocumentTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     
-
     const allAllowed = [...allowedImageTypes, ...allowedVideoTypes, ...allowedDocumentTypes];
     
     if (allAllowed.includes(file.mimetype)) {
@@ -21,12 +16,10 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-
 const createStorage = (folderName) => {
     return new CloudinaryStorage({
         cloudinary: cloudinary,
         params: async (req, file) => {
-
             let resourceType = 'auto';
             let format = 'jpg';
             
@@ -61,7 +54,6 @@ const createStorage = (folderName) => {
     });
 };
 
-
 export const uploadSingle = (folderName, fieldName) => {
     const storage = createStorage(folderName);
     const upload = multer({ 
@@ -73,7 +65,6 @@ export const uploadSingle = (folderName, fieldName) => {
     });
     return upload.single(fieldName);
 };
-
 
 export const uploadMultiple = (folderName, fieldName, maxCount = 10) => {
     const storage = createStorage(folderName);
@@ -87,16 +78,18 @@ export const uploadMultiple = (folderName, fieldName, maxCount = 10) => {
     return upload.array(fieldName, maxCount);
 };
 
-
+// ✅ ফিক্সড: ফিল্ডস আপলোডের জন্য সঠিক ফাংশন
 export const uploadFields = (folderName, fields) => {
     const storage = createStorage(folderName);
     const upload = multer({ 
         storage: storage,
-        fileFilter: fileFilter
+        fileFilter: fileFilter,
+        limits: {
+            fileSize: 100 * 1024 * 1024  
+        }
     });
     return upload.fields(fields);
 };
-
 
 export const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
     try {
@@ -109,7 +102,6 @@ export const deleteFromCloudinary = async (publicId, resourceType = 'image') => 
         throw error;
     }
 };
-
 
 export const getPublicIdFromUrl = (url) => {
     const parts = url.split('/');

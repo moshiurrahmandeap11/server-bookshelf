@@ -79,7 +79,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // proper email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
@@ -88,7 +87,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // password length verification and matching verification
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
@@ -103,7 +101,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // check with email if user exists
     const isExists = await db.collection("users").findOne({ email: email });
 
     if (isExists) {
@@ -113,7 +110,6 @@ export const register = async (req, res) => {
       });
     }
 
-    // make the password encrypt using bcrypt
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = {
@@ -163,7 +159,6 @@ export const register = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const userId = req.user.id; 
-    
 
     const user = await db.collection("users").findOne(
       { _id: new ObjectId(userId) },
@@ -193,11 +188,271 @@ export const getUser = async (req, res) => {
 };
 
 
+export const getAllUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+
+
+    let searchCondition = {};
+    if (search) {
+      searchCondition = {
+        $or: [
+          { fullName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
+
+
+    const total = await db.collection("users").countDocuments(searchCondition);
+
+
+    const users = await db.collection("users")
+      .find(searchCondition, { projection: { password: 0 } })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: users,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+      },
+    });
+  } catch (error) {
+    console.error("Get all users error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await db.collection("users").findOne(
+      { _id: new ObjectId(id) },
+      { projection: { password: 0 } }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User fetched successfully",
+      data: user,
+    });
+  } catch (error) {
+    console.error("Get user by id error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+export const updateUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, role, isActive } = req.body;
+
+
+    const existingUser = await db.collection("users").findOne({ _id: new ObjectId(id) });
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+
+    const updateFields = {
+      updatedAt: new Date(),
+    };
+
+    if (fullName) updateFields.fullName = fullName;
+    if (email) updateFields.email = email.toLowerCase();
+    if (role) updateFields.role = role;
+    if (typeof isActive === "boolean") updateFields.isActive = isActive;
+
+    if (email && email !== existingUser.email) {
+      const emailExists = await db.collection("users").findOne({ 
+        email: email.toLowerCase(),
+        _id: { $ne: new ObjectId(id) }
+      });
+      if (emailExists) {
+        return res.status(409).json({
+          success: false,
+          message: "Email already exists",
+        });
+      }
+    }
+
+    const result = await db.collection("users").updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateFields }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+
+    const updatedUser = await db.collection("users").findOne(
+      { _id: new ObjectId(id) },
+      { projection: { password: 0 } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update user by id error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+export const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role || !["user", "admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Must be 'user' or 'admin'",
+      });
+    }
+
+    const existingUser = await db.collection("users").findOne({ _id: new ObjectId(id) });
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+
+    if (existingUser.email === "moshiurrahmandeap@gmail.com" && role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Cannot change super admin role",
+      });
+    }
+
+    const result = await db.collection("users").updateOne(
+      { _id: new ObjectId(id) },
+      { 
+        $set: { 
+          role: role,
+          updatedAt: new Date()
+        } 
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `User role updated to ${role}`,
+    });
+  } catch (error) {
+    console.error("Update user role error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+export const deleteUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await db.collection("users").findOne({ _id: new ObjectId(id) });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+
+    if (user.email === "moshiurrahmandeap@gmail.com") {
+      return res.status(403).json({
+        success: false,
+        message: "Cannot delete super admin",
+      });
+    }
+
+    if (user.profilePicturePublicId) {
+      try {
+        await deleteFromCloudinary(user.profilePicturePublicId, 'image');
+      } catch (deleteError) {
+        console.error("Profile picture deletion error:", deleteError);
+      }
+    }
+
+    const result = await db.collection("users").deleteOne({ _id: new ObjectId(id) });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete user by id error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
 export const editUser = async (req, res) => {
   try {
     const userId = req.user.id; 
     const { fullName, currentPassword, newPassword, confirmNewPassword } = req.body;
-    
 
     const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
     
@@ -207,7 +462,6 @@ export const editUser = async (req, res) => {
         message: "User not found",
       });
     }
-    
 
     const updateFields = {
       updatedAt: new Date(),
@@ -216,17 +470,14 @@ export const editUser = async (req, res) => {
     if (fullName && fullName !== user.fullName) {
       updateFields.fullName = fullName;
     }
-    
 
     if (newPassword) {
-
       if (!currentPassword) {
         return res.status(400).json({
           success: false,
           message: "Current password is required to change password",
         });
       }
-      
 
       const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
       if (!isPasswordValid) {
@@ -235,7 +486,6 @@ export const editUser = async (req, res) => {
           message: "Current password is incorrect",
         });
       }
-      
 
       if (newPassword.length < 6) {
         return res.status(400).json({
@@ -243,7 +493,6 @@ export const editUser = async (req, res) => {
           message: "New password must be at least 6 characters",
         });
       }
-      
 
       if (newPassword !== confirmNewPassword) {
         return res.status(400).json({
@@ -251,29 +500,23 @@ export const editUser = async (req, res) => {
           message: "New password and confirm password do not match",
         });
       }
-      
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       updateFields.password = hashedPassword;
     }
-    
 
     if (req.file) {
-
       if (user.profilePicturePublicId) {
         try {
           await deleteFromCloudinary(user.profilePicturePublicId, 'image');
         } catch (deleteError) {
           console.error("Old profile picture deletion error:", deleteError);
-
         }
       }
-      
 
       updateFields.profilePicture = req.file.path;
       updateFields.profilePicturePublicId = req.file.filename;
     }
-    
 
     const result = await db.collection("users").updateOne(
       { _id: new ObjectId(userId) },
@@ -286,7 +529,6 @@ export const editUser = async (req, res) => {
         message: "No changes were made to the profile",
       });
     }
-    
 
     const updatedUser = await db.collection("users").findOne(
       { _id: new ObjectId(userId) },
@@ -309,12 +551,10 @@ export const editUser = async (req, res) => {
   }
 };
 
-
 export const deleteUser = async (req, res) => {
   try {
     const userId = req.user.id; 
     const { password, hardDelete = false } = req.body;
-    
 
     const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
     
@@ -324,7 +564,6 @@ export const deleteUser = async (req, res) => {
         message: "User not found",
       });
     }
-    
 
     if (!password) {
       return res.status(400).json({
@@ -340,10 +579,8 @@ export const deleteUser = async (req, res) => {
         message: "Incorrect password",
       });
     }
-    
 
     if (hardDelete) {
-
       if (user.profilePicturePublicId) {
         try {
           await deleteFromCloudinary(user.profilePicturePublicId, 'image');
@@ -351,7 +588,6 @@ export const deleteUser = async (req, res) => {
           console.error("Profile picture deletion error:", deleteError);
         }
       }
-      
 
       const result = await db.collection("users").deleteOne({ _id: new ObjectId(userId) });
       
@@ -366,10 +602,7 @@ export const deleteUser = async (req, res) => {
         success: true,
         message: "User account permanently deleted",
       });
-    }
-    
-
-    else {
+    } else {
       await db.collection("users").updateOne(
         { _id: new ObjectId(userId) },
         { 
@@ -403,7 +636,6 @@ export const logOut = async (req, res) => {
       success: true,
       message: "Logged out successfully. Please remove the token from client side.",
     });
-    
   } catch (error) {
     console.error("Logout error:", error);
     return res.status(500).json({
@@ -440,7 +672,6 @@ export const reactivateUser = async (req, res) => {
       success: true,
       message: "Account reactivated successfully",
     });
-    
   } catch (error) {
     console.error("Reactivate user error:", error);
     return res.status(500).json({
