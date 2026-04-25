@@ -93,12 +93,12 @@ export const fetchCategoriesPaginated = async (req, res) => {
     }
 };
 
-// ✅ create new category (ইমেজ আপলোড সহ)
+
 export const createCategory = async (req, res) => {
     try {
         const { name, slug, description } = req.body;
         
-        // ভ্যালিডেশন
+
         if (!name || !slug) {
             return res.status(400).json({
                 success: false,
@@ -106,7 +106,7 @@ export const createCategory = async (req, res) => {
             });
         }
         
-        // ক্যাটাগরি ইতিমধ্যে আছে কিনা চেক
+
         const existingCategory = await db.collection("categories").findOne({ 
             $or: [{ name }, { slug }] 
         });
@@ -118,7 +118,7 @@ export const createCategory = async (req, res) => {
             });
         }
         
-        // ✅ ইমেজ URL (যদি আপলোড করা হয়)
+
         let imageUrl = null;
         let imagePublicId = null;
         
@@ -156,14 +156,14 @@ export const createCategory = async (req, res) => {
     }
 };
 
-// ✅ update category (ইমেজ আপলোড সহ)
+
 export const updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, slug, description } = req.body;
         const { ObjectId } = await import('mongodb');
         
-        // বিদ্যমান ক্যাটাগরি খুঁজে বের করুন
+
         const existingCategory = await db.collection("categories").findOne({ 
             _id: new ObjectId(id) 
         });
@@ -183,9 +183,9 @@ export const updateCategory = async (req, res) => {
         if (slug) updateFields.slug = slug;
         if (description !== undefined) updateFields.description = description;
         
-        // ✅ ইমেজ আপডেট (যদি নতুন ইমেজ আসে)
+
         if (req.file) {
-            // পুরনো ইমেজ ডিলিট করুন (যদি থাকে)
+
             if (existingCategory.imagePublicId) {
                 try {
                     await deleteFromCloudinary(existingCategory.imagePublicId, 'image');
@@ -208,7 +208,7 @@ export const updateCategory = async (req, res) => {
             message: "Category updated successfully",
         });
     } catch (error) {
-        console.error("Category update error:", error);
+
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -216,13 +216,13 @@ export const updateCategory = async (req, res) => {
     }
 };
 
-// ✅ delete category (ইমেজও ডিলিট হবে)
+
 export const deleteCategory = async (req, res) => {
     try {
         const { id } = req.params;
         const { ObjectId } = await import('mongodb');
         
-        // ক্যাটাগরি খুঁজে বের করুন
+
         const category = await db.collection("categories").findOne({ 
             _id: new ObjectId(id) 
         });
@@ -234,7 +234,7 @@ export const deleteCategory = async (req, res) => {
             });
         }
         
-        // ✅ ক্যাটাগরির ইমেজ ডিলিট করুন (যদি থাকে)
+
         if (category.imagePublicId) {
             try {
                 await deleteFromCloudinary(category.imagePublicId, 'image');
@@ -243,7 +243,7 @@ export const deleteCategory = async (req, res) => {
             }
         }
         
-        // ক্যাটাগরি ডিলিট করুন
+
         const result = await db.collection("categories").deleteOne({ 
             _id: new ObjectId(id) 
         });
@@ -253,7 +253,7 @@ export const deleteCategory = async (req, res) => {
             message: "Category deleted successfully",
         });
     } catch (error) {
-        console.error("Category deletion error:", error);
+
         return res.status(500).json({
             success: false,
             message: "Internal server error",
