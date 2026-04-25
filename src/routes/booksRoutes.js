@@ -12,16 +12,16 @@ import {
   updateReview
 } from "../controllers/booksControllers.js";
 import verifyToken from "../middleware/verifyToken.js";
-import { uploadFields } from "../middleware/upload.js"; // ✅ uploadFields ব্যবহার করুন
+import { uploadFields } from "../middleware/upload.js"; 
 
 const router = Router();
 
-// পাবলিক রাউটস
+
 router.get("/", getAllBooks);
 router.get("/:id", getBookById);
 router.get("/user/me", verifyToken, getUserBooks);
 
-// ✅ প্রোটেক্টেড রাউটস (uploadFields ব্যবহার)
+
 router.post(
   "/",
   verifyToken,
@@ -45,7 +45,7 @@ router.put(
 router.delete("/:id", verifyToken, deleteBook);
 router.delete("/:id/images/:imageId", verifyToken, deleteGalleryImage);
 
-// রিভিউ রাউটস
+
 router.post("/:id/reviews", verifyToken, addReview);
 router.put("/:id/reviews/:reviewId", verifyToken, updateReview);  
 router.delete("/:id/reviews/:reviewId", verifyToken, deleteReview);
