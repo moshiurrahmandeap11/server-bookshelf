@@ -5,17 +5,14 @@ import { uploadFields } from "../middleware/upload.js";
 
 const router = Router();
 
-// পাবলিক রাউট
+
 router.get("/", getSettings);
 
-// প্রোটেক্টেড রাউটস (শুধু অ্যাডমিন)
+
 router.put(
   "/",
   verifyToken,
   (req, res, next) => {
-    // ডিবাগ লগ
-    console.log("🔧 Settings update request received");
-    console.log("Content-Type:", req.headers['content-type']);
     next();
   },
   uploadFields('settings', [
@@ -24,7 +21,7 @@ router.put(
     { name: 'ogImage', maxCount: 1 }
   ]),
   (req, res, next) => {
-    console.log("📁 Files received:", req.files ? Object.keys(req.files) : "No files");
+
     next();
   },
   updateSettings
