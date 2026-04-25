@@ -78,7 +78,7 @@ export const uploadMultiple = (folderName, fieldName, maxCount = 10) => {
     return upload.array(fieldName, maxCount);
 };
 
-// ✅ ফিক্সড: ফিল্ডস আপলোডের জন্য সঠিক ফাংশন
+
 export const uploadFields = (folderName, fields) => {
     const storage = createStorage(folderName);
     const upload = multer({ 
