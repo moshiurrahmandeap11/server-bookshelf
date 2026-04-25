@@ -39,7 +39,7 @@ export const getSettings = async (req, res) => {
       settings = { ...defaultSettings, _id: result.insertedId };
     }
     
-    // ✅ socialLinks কে JSON এ কনভার্ট করা (যদি স্ট্রিং হয়)
+
     if (settings.socialLinks && typeof settings.socialLinks === 'string') {
       try {
         settings.socialLinks = JSON.parse(settings.socialLinks);
@@ -61,7 +61,7 @@ export const getSettings = async (req, res) => {
       data: settings
     });
   } catch (error) {
-    console.error("Get settings error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Internal server error"
@@ -72,7 +72,7 @@ export const getSettings = async (req, res) => {
 // update site settings
 export const updateSettings = async (req, res) => {
   try {
-    console.log("📝 Updating settings...");
+
     
     const {
       siteTitle,
@@ -99,11 +99,11 @@ export const updateSettings = async (req, res) => {
     if (contactPhone !== undefined) updateFields.contactPhone = contactPhone;
     if (contactAddress !== undefined) updateFields.contactAddress = contactAddress;
     
-    // ✅ সোশ্যাল লিংক সঠিকভাবে প্রসেস করা
+
     if (socialLinks !== undefined) {
       let parsedSocialLinks = socialLinks;
       
-      // যদি স্ট্রিং হয়, তাহলে JSON parse করুন
+
       if (typeof socialLinks === 'string') {
         try {
           parsedSocialLinks = JSON.parse(socialLinks);
@@ -113,7 +113,7 @@ export const updateSettings = async (req, res) => {
         }
       }
       
-      // যদি অবজেক্ট হয়, তাহলে সরাসরি ব্যবহার করুন
+
       if (typeof parsedSocialLinks === 'object' && parsedSocialLinks !== null) {
         updateFields.socialLinks = {
           facebook: parsedSocialLinks.facebook || "",
@@ -133,10 +133,10 @@ export const updateSettings = async (req, res) => {
       }
     }
 
-    // বিদ্যমান সেটিংস পাওয়া
+ 
     const existingSettings = await db.collection("settings").findOne({ type: "site_settings" });
 
-    // Favicon আপডেট
+
     if (req.files && req.files.favicon && req.files.favicon.length > 0) {
       const faviconFile = req.files.favicon[0];
       if (existingSettings?.faviconPublicId) {
@@ -150,7 +150,7 @@ export const updateSettings = async (req, res) => {
       updateFields.faviconPublicId = faviconFile.filename;
     }
 
-    // লোগো আপডেট
+  
     if (req.files && req.files.logo && req.files.logo.length > 0) {
       const logoFile = req.files.logo[0];
       if (existingSettings?.logoPublicId) {
@@ -164,7 +164,7 @@ export const updateSettings = async (req, res) => {
       updateFields.logoPublicId = logoFile.filename;
     }
 
-    // OG ইমেজ আপডেট
+
     if (req.files && req.files.ogImage && req.files.ogImage.length > 0) {
       const ogImageFile = req.files.ogImage[0];
       if (existingSettings?.ogImagePublicId) {
@@ -178,17 +178,17 @@ export const updateSettings = async (req, res) => {
       updateFields.ogImagePublicId = ogImageFile.filename;
     }
 
-    // ডাটাবেস আপডেট করা
+
     const result = await db.collection("settings").updateOne(
       { type: "site_settings" },
       { $set: updateFields },
       { upsert: true }
     );
 
-    // আপডেটেড সেটিংস ফেরত দেওয়া
+
     const updatedSettings = await db.collection("settings").findOne({ type: "site_settings" });
     
-    // ✅ রিটার্ন করার সময় socialLinks কে অবজেক্ট আকারে পাঠানো
+
     if (updatedSettings.socialLinks && typeof updatedSettings.socialLinks === 'string') {
       try {
         updatedSettings.socialLinks = JSON.parse(updatedSettings.socialLinks);
@@ -273,7 +273,7 @@ export const resetSettings = async (req, res) => {
       data: updatedSettings
     });
   } catch (error) {
-    console.error("Reset settings error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Internal server error"
