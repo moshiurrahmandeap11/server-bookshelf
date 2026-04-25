@@ -1,6 +1,6 @@
 import { deleteFromCloudinary } from '../middleware/upload.js';
 
-// সিঙ্গেল ফাইল আপলোড কন্ট্রোলার
+
 export const uploadSingleFile = async (req, res) => {
     try {
         if (!req.file) {
@@ -10,7 +10,7 @@ export const uploadSingleFile = async (req, res) => {
             });
         }
 
-        // ফাইলের টাইপ নির্ধারণ
+
         let resourceType = 'raw';
         if (req.file.mimetype.startsWith('image/')) {
             resourceType = 'image';
@@ -34,7 +34,7 @@ export const uploadSingleFile = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Upload error:', error);
+
         return res.status(500).json({
             success: false,
             message: error.message || 'File upload failed'
@@ -42,7 +42,7 @@ export const uploadSingleFile = async (req, res) => {
     }
 };
 
-// মাল্টিপল ফাইল আপলোড কন্ট্রোলার
+
 export const uploadMultipleFiles = async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
@@ -77,7 +77,7 @@ export const uploadMultipleFiles = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Upload error:', error);
+
         return res.status(500).json({
             success: false,
             message: error.message || 'File upload failed'
@@ -85,7 +85,7 @@ export const uploadMultipleFiles = async (req, res) => {
     }
 };
 
-// ফাইল ডিলিট কন্ট্রোলার
+
 export const deleteFile = async (req, res) => {
     try {
         const { publicId, resourceType } = req.body;
@@ -112,7 +112,7 @@ export const deleteFile = async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Delete error:', error);
+
         return res.status(500).json({
             success: false,
             message: error.message || 'File deletion failed'
