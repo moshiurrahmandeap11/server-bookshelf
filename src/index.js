@@ -15,7 +15,7 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 
 app.use(cors({
-    origin: 'http://localhost:3000',  
+    origin: ["http://localhost:3000", "https://client-bookshelf.vercel.app"],  
     credentials: true,                
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
