@@ -251,3 +251,128 @@ export const deleteContact = async (req, res) => {
     });
   }
 };
+
+// reply to contact message
+export const replyToContact = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { replyMessage } = req.body;
+
+    if (!replyMessage || replyMessage.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Reply message is required",
+      });
+    }
+
+
+    const message = await db.collection("contacts").findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: "Message not found",
+      });
+    }
+
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+
+    const userMailOptions = {
+      from: process.env.SMTP_USER || "noreply@bookshelf.com",
+      to: message.email,
+      subject: `Re: ${message.subject} - BookShelf Support`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #F59E0B, #EA580C); padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { color: white; margin: 0; }
+            .content { background: #f9fafb; padding: 25px; border-radius: 0 0 10px 10px; }
+            .original-message { background: #e5e7eb; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .reply { background: #dbeafe; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #F59E0B; }
+            .footer { text-align: center; padding-top: 20px; font-size: 12px; color: #6b7280; }
+            .btn { display: inline-block; background: #F59E0B; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>BookShelf Support</h1>
+            </div>
+            <div class="content">
+              <h2>Dear ${message.name},</h2>
+              <p>Thank you for reaching out to BookShelf. We have reviewed your inquiry and here's our response:</p>
+              
+              <div class="reply">
+                <strong>📝 Our Response:</strong>
+                <p style="margin-top: 10px;">${replyMessage.replace(/\n/g, "<br>")}</p>
+              </div>
+              
+              <div class="original-message">
+                <strong>📧 Your Original Message:</strong>
+                <p><strong>Subject:</strong> ${message.subject}</p>
+                <p><strong>Message:</strong></p>
+                <p>${message.message.replace(/\n/g, "<br>")}</p>
+              </div>
+              
+              <p>If you have any further questions, feel free to reply to this email or contact us again through our website.</p>
+              <br>
+              <p>Best regards,</p>
+              <p><strong>BookShelf Customer Support Team</strong></p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} BookShelf. All rights reserved.</p>
+              <p>This is an automated response from BookShelf support system.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      await transporter.sendMail(userMailOptions);
+    }
+
+
+    await db.collection("contacts").updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status: "replied",
+          replyMessage: replyMessage,
+          repliedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Reply sent successfully to " + message.email,
+    });
+  } catch (error) {
+    console.error("Reply to contact error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send reply. Please try again.",
+    });
+  }
+};

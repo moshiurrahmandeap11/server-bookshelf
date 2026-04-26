@@ -35,7 +35,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/categories", categories);
 app.use("/api/books", bookRoutes);
 app.use("/api/settings", settingsRoutes);
-app.use("/api/contact", contactRoutes);
+app.use("/api/contacts", contactRoutes);
 
 
 
