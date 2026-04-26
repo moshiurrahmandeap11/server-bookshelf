@@ -6,7 +6,7 @@ let client;
 let db;
 
 const uri = process.env.MONGO_URI;
-console.log("mongo db uri :", uri);
+console.log("mongo db uri show:", uri);
 
 const connectDB = async () => {
     try {
