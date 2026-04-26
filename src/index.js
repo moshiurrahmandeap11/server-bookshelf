@@ -12,6 +12,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import categories from "./routes/categoryRoutes.js";
 import bookRoutes from "./routes/booksRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 app.use(cors({
     origin: 'http://localhost:3000',  
@@ -34,6 +35,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/categories", categories);
 app.use("/api/books", bookRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/contact", contactRoutes);
 
 
 
