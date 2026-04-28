@@ -128,7 +128,7 @@ const getUserChatHistory = async (userId, limit = 10) => {
 const generateBookSuggestions = async (books, queryType = "general") => {
   if (!books || books.length === 0) return "";
 
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = process.env.FRONTEND_URL;
   let suggestions = "\n\n📚 Here are some books you might like:\n\n";
 
   books.slice(0, 5).forEach((book, index) => {
@@ -253,7 +253,7 @@ ${bookSearchResults.length > 0 ? `BOOK SEARCH RESULTS (from our database):\n${bo
 
 RULES:
 - ALWAYS provide book links in your responses when recommending books
-- Use Markdown format for links: [Book Title](http://localhost:3000/books/{bookId})
+- Use Markdown format for links: [Book Title](https://client-bookshelf.vercel.app/books/{bookId})
 - Be professional, friendly, and helpful
 - If user speaks Bengali, respond in Bengali
 - If user speaks English, respond in English
@@ -281,7 +281,7 @@ Now respond to the user's message naturally and helpfully. If books were found, 
     // Add book suggestions if found and not already in response
     if (
       bookSearchResults.length > 0 &&
-      !aiResponse.includes("http://localhost:3000/books")
+      !aiResponse.includes(`${process.env.FRONTEND_URL}/books`)
     ) {
       aiResponse += bookSuggestionsText;
     }
@@ -389,7 +389,7 @@ export const getBookRecommendations = async (req, res) => {
       price: book.discountPrice || book.price,
       rating: book.rating?.average,
       thumbnail: book.thumbnail,
-      link: `http://localhost:3000/books/${book._id}`,
+      link: `${process.env.FRONTEND_URL}/books/${book._id}`,
       reason: `Based on your interest in ${book.category?.name || "books"}`,
     }));
 
@@ -466,7 +466,7 @@ export const smartBookSearch = async (req, res) => {
       price: book.discountPrice || book.price,
       rating: book.rating?.average,
       thumbnail: book.thumbnail,
-      link: `http://localhost:3000/books/${book._id}`,
+      link: `${FRONTEND_URL}/books/${book._id}`,
       description: book.description?.substring(0, 150),
     }));
 
@@ -630,7 +630,7 @@ export const generateBookSummary = async (req, res) => {
       summary: summary,
       category: book.category?.name,
       rating: book.rating?.average,
-      link: `http://localhost:3000/books/${book._id}`,
+      link: `${process.env.FRONTEND_URL}/books/${book._id}`,
     });
   } catch (error) {
     console.error("Summary error:", error);
