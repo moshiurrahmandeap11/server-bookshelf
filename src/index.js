@@ -13,6 +13,7 @@ import categories from "./routes/categoryRoutes.js";
 import bookRoutes from "./routes/booksRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 app.use(cors({
     origin: ["http://localhost:3000", "https://client-bookshelf.vercel.app"],  
@@ -36,6 +37,7 @@ app.use("/api/categories", categories);
 app.use("/api/books", bookRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use('/api/ai', aiRoutes);
 
 
 
