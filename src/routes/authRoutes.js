@@ -11,7 +11,8 @@ import {
   editUser, 
   deleteUser, 
   logOut,
-  reactivateUser 
+  reactivateUser, 
+  googleLogin
 } from "../controllers/authControllers.js";
 import verifyToken from "../middleware/verifyToken.js";
 import { uploadSingle } from "../middleware/upload.js";
@@ -21,6 +22,7 @@ const router = Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/google-login", googleLogin);
 
 
 router.get("/me", verifyToken, getUser); 

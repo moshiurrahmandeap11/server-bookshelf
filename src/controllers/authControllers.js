@@ -2,7 +2,41 @@ import { db } from "../database/db.js";
 import bcrypt from "bcrypt";
 import generateToken from "../middleware/generateToken.js";
 import { deleteFromCloudinary } from "../middleware/upload.js";
-import { ObjectId } from "mongodb"; 
+import { ObjectId } from "mongodb";
+import admin from "firebase-admin";  // ✅ Firebase Admin import করতে হবে
+
+// Firebase Admin SDK initialization
+let firebaseAdminInitialized = false;
+
+const initializeFirebaseAdmin = () => {
+  if (!firebaseAdminInitialized) {
+    try {
+      if (!admin.apps.length) {
+        // Check if we have the required environment variables
+        if (process.env.FIREBASE_PROJECT_ID && 
+            process.env.FIREBASE_CLIENT_EMAIL && 
+            process.env.FIREBASE_PRIVATE_KEY) {
+          
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: process.env.FIREBASE_PROJECT_ID,
+              clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+              privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            }),
+          });
+          firebaseAdminInitialized = true;
+          console.log("Firebase Admin initialized successfully");
+        } else {
+          console.log("Firebase Admin credentials not found, skipping initialization");
+        }
+      } else {
+        firebaseAdminInitialized = true;
+      }
+    } catch (error) {
+      console.error("Firebase Admin initialization error:", error);
+    }
+  }
+};
 
 // login user
 export const login = async (req, res) => {
@@ -90,7 +124,7 @@ export const register = async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        message: "Passowrd must be at least 6 characters",
+        message: "Password must be at least 6 characters",
       });
     }
 
@@ -155,7 +189,6 @@ export const register = async (req, res) => {
   }
 };
 
-
 export const getUser = async (req, res) => {
   try {
     const userId = req.user.id; 
@@ -187,14 +220,12 @@ export const getUser = async (req, res) => {
   }
 };
 
-
 export const getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const search = req.query.search || "";
-
 
     let searchCondition = {};
     if (search) {
@@ -206,9 +237,7 @@ export const getAllUsers = async (req, res) => {
       };
     }
 
-
     const total = await db.collection("users").countDocuments(searchCondition);
-
 
     const users = await db.collection("users")
       .find(searchCondition, { projection: { password: 0 } })
@@ -236,7 +265,6 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
-
 
 export const getUserById = async (req, res) => {
   try {
@@ -268,12 +296,10 @@ export const getUserById = async (req, res) => {
   }
 };
 
-
 export const updateUserById = async (req, res) => {
   try {
     const { id } = req.params;
     const { fullName, email, role, isActive } = req.body;
-
 
     const existingUser = await db.collection("users").findOne({ _id: new ObjectId(id) });
     if (!existingUser) {
@@ -282,7 +308,6 @@ export const updateUserById = async (req, res) => {
         message: "User not found",
       });
     }
-
 
     const updateFields = {
       updatedAt: new Date(),
@@ -318,7 +343,6 @@ export const updateUserById = async (req, res) => {
       });
     }
 
-
     const updatedUser = await db.collection("users").findOne(
       { _id: new ObjectId(id) },
       { projection: { password: 0 } }
@@ -337,7 +361,6 @@ export const updateUserById = async (req, res) => {
     });
   }
 };
-
 
 export const updateUserRole = async (req, res) => {
   try {
@@ -358,7 +381,6 @@ export const updateUserRole = async (req, res) => {
         message: "User not found",
       });
     }
-
 
     if (existingUser.email === "moshiurrahmandeap@gmail.com" && role !== "admin") {
       return res.status(403).json({
@@ -418,6 +440,7 @@ export const deleteUserById = async (req, res) => {
       });
     }
 
+
     if (user.profilePicturePublicId) {
       try {
         await deleteFromCloudinary(user.profilePicturePublicId, 'image');
@@ -425,6 +448,20 @@ export const deleteUserById = async (req, res) => {
         console.error("Profile picture deletion error:", deleteError);
       }
     }
+
+  
+    if (user.provider === "google" && user.googleId) {
+      try {
+        initializeFirebaseAdmin();
+        if (admin.apps.length) {
+          await admin.auth().deleteUser(user.googleId); 
+          console.log(`Firebase user deleted: ${user.googleId}`);
+        }
+      } catch (firebaseError) {
+        console.error("Firebase user deletion error:", firebaseError);
+      }
+    }
+
 
     const result = await db.collection("users").deleteOne({ _id: new ObjectId(id) });
     
@@ -437,7 +474,7 @@ export const deleteUserById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message: "User deleted successfully" + (user.provider === "google" ? " from database and Firebase" : ""),
     });
   } catch (error) {
     console.error("Delete user by id error:", error);
@@ -447,7 +484,6 @@ export const deleteUserById = async (req, res) => {
     });
   }
 };
-
 
 export const editUser = async (req, res) => {
   try {
@@ -551,6 +587,7 @@ export const editUser = async (req, res) => {
   }
 };
 
+
 export const deleteUser = async (req, res) => {
   try {
     const userId = req.user.id; 
@@ -565,22 +602,26 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    if (!password) {
-      return res.status(400).json({
-        success: false,
-        message: "Password is required to delete account",
-      });
-    }
-    
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: "Incorrect password",
-      });
-    }
-
     if (hardDelete) {
+
+      if (user.provider !== "google") {
+        if (!password) {
+          return res.status(400).json({
+            success: false,
+            message: "Password is required to delete account",
+          });
+        }
+        
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+          return res.status(401).json({
+            success: false,
+            message: "Incorrect password",
+          });
+        }
+      }
+      
+
       if (user.profilePicturePublicId) {
         try {
           await deleteFromCloudinary(user.profilePicturePublicId, 'image');
@@ -588,6 +629,20 @@ export const deleteUser = async (req, res) => {
           console.error("Profile picture deletion error:", deleteError);
         }
       }
+
+
+      if (user.provider === "google" && user.googleId) {
+        try {
+          initializeFirebaseAdmin();
+          if (admin.apps.length) {
+            await admin.auth().deleteUser(user.googleId);  
+            console.log(`Firebase user deleted: ${user.googleId}`);
+          }
+        } catch (firebaseError) {
+          console.error("Firebase user deletion error:", firebaseError);
+        }
+      }
+
 
       const result = await db.collection("users").deleteOne({ _id: new ObjectId(userId) });
       
@@ -600,9 +655,10 @@ export const deleteUser = async (req, res) => {
       
       return res.status(200).json({
         success: true,
-        message: "User account permanently deleted",
+        message: "User account permanently deleted" + (user.provider === "google" ? " from database and Firebase" : ""),
       });
     } else {
+
       await db.collection("users").updateOne(
         { _id: new ObjectId(userId) },
         { 
@@ -629,7 +685,6 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-
 export const logOut = async (req, res) => {
   try {
     return res.status(200).json({
@@ -644,7 +699,6 @@ export const logOut = async (req, res) => {
     });
   }
 };
-
 
 export const reactivateUser = async (req, res) => {
   try {
@@ -674,6 +728,69 @@ export const reactivateUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Reactivate user error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// Google login
+export const googleLogin = async (req, res) => {
+  try {
+    const { fullName, email, profilePicture, googleId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+
+    let user = await db.collection("users").findOne({ email: email });
+
+    if (!user) {
+
+      const newUser = {
+        fullName: fullName || email.split('@')[0],
+        email: email.toLowerCase(),
+        password: null,
+        role: "user",
+        isActive: true,
+        profilePicture: profilePicture || null,
+        profilePicturePublicId: null,
+        googleId: googleId,
+        provider: "google",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const result = await db.collection("users").insertOne(newUser);
+      user = { ...newUser, _id: result.insertedId };
+    }
+
+
+    const token = generateToken({
+      id: user._id,
+      email: user.email,
+      role: user.role || "user",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      token: token,
+      user: {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role || "user",
+        profilePicture: user.profilePicture || null,
+      },
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
